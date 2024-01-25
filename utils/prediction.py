@@ -1,14 +1,14 @@
 import joblib
-from app.models.models import Prediction
-from app.core.database import get_db
-from app.core.worker import conn
+from models.models import Prediction
+from core.database import get_db
+from core.worker import conn
 from rq import Queue
-from app.core.config import MODEL_COSTS
+from core.config import MODEL_COSTS
 
 # Загрузка обученных моделей
 MODELS = {
-    "model1": joblib.load("../../ml_models/lr_model.joblib"),
-    "model2": joblib.load("../../ml_models/gb_model.joblib"),
+    "model1": joblib.load("ml_models/lr_model.joblib"),
+    "model2": joblib.load("ml_models/gb_model.joblib"),
 }
 
 

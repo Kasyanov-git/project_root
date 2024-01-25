@@ -1,12 +1,12 @@
 from fastapi import HTTPException, status, Depends
-from app.models.models import User
-from database import get_db
+from models.models import User
+from core.database import get_db
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
-from app.schema.schemas import TokenData
-from app.core.config import SECRET_KEY
+from schema.schemas import TokenData
+from core.config import SECRET_KEY
 
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
