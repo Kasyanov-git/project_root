@@ -1,19 +1,18 @@
 import uuid
 import os
-from schemas import User as UserSchema, UserCreate, Token
+from app.schema.schemas import User as UserSchema, UserCreate, Token
 from rq.job import Job
-from worker import conn
+from app.core.worker import conn
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import OAuth2PasswordRequestForm
-from auth import create_access_token, get_current_user
-from database import get_db
+from app.core.auth import create_access_token, get_current_user
+from app.core.database import get_db
 from sqlalchemy.orm import Session
-from models import User as UserModel
-from prediction import perform_async_prediction
-from preprocessing import read_user_data, preprocess_user_input
+from app.models.models import User as UserModel
+from app.utils.prediction import perform_async_prediction
+from app.utils.preprocessing import read_user_data, preprocess_user_input
 
-from redis import Redis
-from config import REDIS_URL, MODEL_COSTS
+from app.core.config import MODEL_COSTS
 
 UPLOAD_DIRECTORY = "./uploaded_files"
 

@@ -7,8 +7,8 @@ from app.core.config import MODEL_COSTS
 
 # Загрузка обученных моделей
 MODELS = {
-    "model1": joblib.load("../ml_models/lr_model.joblib"),
-    "model2": joblib.load("../ml_models/gb_model.joblib"),
+    "model1": joblib.load("../../ml_models/lr_model.joblib"),
+    "model2": joblib.load("../../ml_models/gb_model.joblib"),
 }
 
 
