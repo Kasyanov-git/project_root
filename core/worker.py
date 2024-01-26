@@ -1,7 +1,7 @@
 from redis import Redis
 # from rq.worker import ThreadPoolWorker as Worker
-from rq.worker import Worker
-from rq import Queue
+# from rq.worker import Worker
+from rq import Queue, Worker
 # from config import REDIS_URL
 
 listen = ['high', 'default', 'low']
