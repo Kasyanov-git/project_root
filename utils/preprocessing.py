@@ -25,5 +25,4 @@ def preprocess_user_input(user_data: Dict[str, Any]) -> Any:
         raise ValueError("Некорректный формат данных: ожидается 241 признак.")
 
     processed_features = list(features.values())
-    print(processed_features)
     return processed_features

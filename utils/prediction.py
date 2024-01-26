@@ -1,63 +1,55 @@
 import joblib
 from models.models import Prediction
 from core.database import get_db
-from core.worker import conn
+from core.worker import app
 from rq import Queue
 from core.config import MODEL_COSTS
 
 # Загрузка обученных моделей
 MODELS = {
-    "model1": joblib.load("ml_models/lr_model.joblib"),
-    "model2": joblib.load("ml_models/gb_model.joblib"),
+    "lr_model": joblib.load("ml_models/lr_model.joblib"),
+    "gb_model": joblib.load("ml_models/gb_model.joblib"),
 }
 
 
-def parse_file_content(content: str) -> list:
-    """
-    Функция преобразует содержимое файла пользователя в формат пригодный для классификатора.
-    :param content: Содержимое текстового файла пользователя в виде строки.
-    :return: Список числовых признаков, извлеченных из файла.
-    """
-    # здесь предполагается, что каждая строка файла содержит один вектор признаков
-    features = [list(map(float, line.split())) for line in content.strip().split('\n')]
-    return features
-
-
 def perform_prediction(model_name: str, features: list, user_id: int):
-    """
-    Функция выполняет асинхронное выполнение предсказания модели.
-    :param model_name:  Название модели, которую хочет использовать пользователь.
-    :param features:    Список числовых признаков, извлеченных из файла.
-    :param user_id:     Идентификатор пользователя.
-    :return:    Идентификатор задачи в RQ.
-    """
     model = MODELS.get(model_name)
     if not model:
         raise ValueError("Model not found.")
 
-    # Выполнение предсказания
-    prediction_result = model.predict(features)
+    try:
+        # Оберните вызов функции предсказания в блок try/except
+        prediction_result = model.predict([features])  # Модель ожидает список списков признаков
+        print("prediction_result: ", prediction_result)
+        return prediction_result[0]
 
-    # Сохранение предсказания в базу данных
-    db = next(get_db())
-    prediction = Prediction(
-        user_id=user_id,
-        result=str(prediction_result),
-        cost=MODEL_COSTS[model_name]
-    )
-    db.add(prediction)
-    db.commit()
-
-    return prediction_result
+    except Exception as exc:
+        # Залогируем исключение, и позволим Celery отметить задачу как неудачную
+        print(f"Prediction failed: {exc}")
+        # self.update_state(state="FAILURE", meta={'exc': str(exc)})
+        raise exc
 
 
-def perform_async_prediction(model_name: str, file_content: str):
+@app.task(bind=True)
+def perform_async_prediction(self, model_name: str, file_content: list, user_id: int):
     """
-    Функция ставит задачу на асинхронное выполнение предсказания в RQ очередь.
-    :param model_name: Название модели, которую хочет использовать пользователь.
-    :param file_content: Содержимое текстового файла, содержащего данные для предсказания.
-    :return: Идентификатор задачи в RQ.
+    Функция ставит задачу на асинхронное выполнение предсказания с использованием Celery.
+    .Описание.
     """
-    queue = Queue(connection=conn)
-    job = queue.enqueue(perform_prediction, model_name, file_content)
-    return job.get_id()
+    # Добавление задачи в очередь Celery и возврат ID задачи:
+    # task = perform_prediction.apply_async((model_name, file_content, user_id))
+    # task =
+    # print("task: ", task)
+    return perform_prediction(model_name, file_content, user_id)
+# def perform_async_prediction(model_name: str, file_content: list, user_id: int):
+#     """
+#     Функция ставит задачу на асинхронное выполнение предсказания в RQ очередь.
+#     :param model_name: Название модели, которую хочет использовать пользователь.
+#     :param file_content: Содержимое текстового файла, содержащего данные для предсказания.
+#     :param user_id: Идентификатор пользователя.
+#     :return: Идентификатор задачи в RQ.
+#     """
+#     queue = Queue(connection=conn)
+#     # features = parse_file_content(file_content)
+#     job = queue.enqueue(perform_prediction, model_name, file_content, user_id)
+#     return job.get_id()

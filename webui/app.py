@@ -48,6 +48,11 @@ login_page = html.Div(style=block_style, children=[
     html.Div(id="login-output"),
 ])
 
+logout_page = html.Div([
+    html.H2('Выход выполнен'),
+    dcc.Link('Войти заново', href='/login')
+])
+
 register_page = html.Div(style=block_style, children=[
     html.H2('Регистрация'),
     dcc.Input(id="register-username", type="text", placeholder="Имя пользователя"),
@@ -64,7 +69,8 @@ profile_page = html.Div(style=block_style, children=[
         html.Button('Перейти к предсказаниям', id='go-to-predictions-button'),
         href='/predict',  # Указываем путь для перехода
         style={'textDecoration': 'none'}  # Убираем подчеркивание для ссылки
-    )
+    ),
+    dcc.Link(html.Button('Результаты предсказаний'), href='/prediction_results', style={'textDecoration': 'none'}),
 ])
 
 prediction_page = html.Div(style=block_style, children=[
@@ -95,6 +101,12 @@ prediction_page = html.Div(style=block_style, children=[
     html.Button("Выполнить предсказание", id='submit-val', n_clicks=0),
     html.Div(id='container-button-basic',
              children='Upload a file and press submit'),
+    dcc.Link(html.Button('Результаты предсказаний'), href='/prediction_results', style={'textDecoration': 'none'}),
+])
+
+prediction_results_page = html.Div(style=block_style, children=[
+    html.H1("Результаты предсказаний"),
+    html.Div(id='prediction-results-div')  # Храним здесь результаты
 ])
 
 # Callback для отображения стоимости выбранной модели
@@ -135,8 +147,11 @@ def login_callback(n_clicks, username, password):
         data={"username": username, "password": password}
     )
     if response.status_code == 200:
-        token = response.json().get('access_token')
-        return {'token': token, 'username': username}, '/profile'
+        session_data = response.json()
+        token = session_data.get('access_token')
+        user_id = session_data.get('user_id')
+        print(user_id)
+        return {'token': token, 'username': username, 'user_id': user_id}, '/profile'
     else:
         return f"Ошибка входа: {response.json().get('detail')}", no_update
 
@@ -185,10 +200,11 @@ def load_profile(session_data, pathname):
         response = requests.get(f"{backend_url}/users/me/", headers=headers)
         if response.status_code == 200:
             user_info = response.json()
-            # print(user_info)
             profile_info = html.Div([
                 html.P(f"Username: {user_info['username']}"),
                 html.P(f"ID: {user_info['id']}"),
+                html.P(f"balance: {user_info['balance']}"),
+                html.P(f"token: {user_info['token']}"),
                 # Дополнительные элементы
             ])
             return profile_info
@@ -267,6 +283,33 @@ def refresh_status(n_clicks, job_id, token):
 
     return html.Div(id='prediction-status')
 
+
+# Callback, который загружает результаты предсказаний для пользователя
+@app.callback(
+    Output('prediction-results-div', 'children'),
+    [Input('session', 'data')]
+)
+def load_prediction_results(session_data):
+    if not session_data or 'token' not in session_data:
+        raise PreventUpdate
+    token = session_data['token']
+    user_id = session_data['user_id']
+    response = requests.get(f"{backend_url}/users/{user_id}/predictions", headers={"Authorization": f"Bearer {token}"})
+    print(user_id)
+    if response.status_code == 200:
+        predictions = response.json()
+        results = [
+            html.Div([
+                html.P(f"ID задачи: {prediction['job_id']}"),
+                html.P(f"Дата: {prediction['created_at']}"),
+                html.P(f"Результат: {prediction['result']}"),
+                html.Div(style={'height': '1px', 'backgroundColor': 'black'})
+            ]) for prediction in predictions
+        ]
+        return results
+    else:
+        return html.Div('Произошла ошибка при загрузке результатов предсказаний.')
+
 # Callback для обновления страницы
 @app.callback(Output('page-content', 'children'),
               Input('url', 'pathname'),
@@ -291,14 +334,11 @@ def display_page(pathname, session_data):
         return profile_page
     elif pathname == '/predict':
         return prediction_page
-    # elif pathname == '/result':
-    #     return result_page
+    elif pathname == '/prediction_results':
+        return prediction_results_page
     else:
         return index_page
 
-logout_page = html.Div([
-    html.H2('Выход выполнен'),
-    dcc.Link('Войти заново', href='/login')
-])
+
 if __name__ == '__main__':
     app.run_server(debug=True)

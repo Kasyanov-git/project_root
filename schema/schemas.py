@@ -12,9 +12,9 @@ class UserCreate(BaseModel):
 class User(BaseModel):
     id: int
     username: str
+    balance: float
 
-    class Config:
-        from_attributes = True
+    token: Optional[float] = None
 
 
 # Схемы для модуля аутентификации
